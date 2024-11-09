@@ -1,7 +1,7 @@
 """Taller evaluable"""
 
 # pylint: disable=broad-exception-raised
-
+import string
 import fileinput
 import glob
 import os.path
@@ -26,6 +26,14 @@ from itertools import groupby
 def load_input(input_directory):
     """Funcion load_input"""
 
+    files=glob.glob(f"{input_directory}/*.txt")
+    sequence=[]
+    with fileinput.input(files=files) as f:
+        for line in f:
+            sequence.append((fileinput.filename(), line.strip()))
+            
+    return sequence
+            
 
 #
 # Escriba la función line_preprocessing que recibe una lista de tuplas de la
@@ -34,6 +42,13 @@ def load_input(input_directory):
 #
 def line_preprocessing(sequence):
     """Line Preprocessing"""
+
+    sequence=[
+        (key, value.translate(str.maketrans("", "", string.punctuation)).lower().strip())
+        for key, value in sequence
+    ]
+
+    return sequence
 
 
 #
@@ -51,6 +66,8 @@ def line_preprocessing(sequence):
 def mapper(sequence):
     """Mapper"""
 
+    return [(word, 1) for _, text_line in sequence for word in text_line.split()]
+
 
 #
 # Escriba la función shuffle_and_sort que recibe la lista de tuplas entregada
@@ -65,6 +82,7 @@ def mapper(sequence):
 #
 def shuffle_and_sort(sequence):
     """Shuffle and Sort"""
+    return sorted(sequence, key=lambda x: x[0])
 
 
 #
@@ -75,6 +93,14 @@ def shuffle_and_sort(sequence):
 #
 def reducer(sequence):
     """Reducer"""
+    diccionario={}
+    for key, value in sequence:
+        if key in diccionario:
+            diccionario[key]+=value
+        else:
+            diccionario[key]=value
+
+    return list(diccionario.items())
 
 
 #
@@ -83,7 +109,11 @@ def reducer(sequence):
 #
 def create_ouptput_directory(output_directory):
     """Create Output Directory"""
-
+    if os.path.exists(output_directory):
+        for file in glob.glob(f"{output_directory}/*"):
+            os.remove(file)
+        os.rmdir(output_directory)
+    os.mkdir(output_directory)
 
 #
 # Escriba la función save_output, la cual almacena en un archivo de texto
@@ -95,6 +125,10 @@ def create_ouptput_directory(output_directory):
 #
 def save_output(output_directory, sequence):
     """Save Output"""
+    with open(f"{output_directory}/part-00000", "w", encoding="utf-8") as f:
+        for key, value in sequence:
+            f.write(f"{key}\t{value}\n")
+
 
 
 #
@@ -103,6 +137,8 @@ def save_output(output_directory, sequence):
 #
 def create_marker(output_directory):
     """Create Marker"""
+    with open(f"{output_directory}/_SUCCESS", "w", encoding="utf-8") as f:
+        f.write("")
 
 
 #
@@ -110,10 +146,23 @@ def create_marker(output_directory):
 #
 def run_job(input_directory, output_directory):
     """Job"""
+    sequence=load_input(input_directory)
+    sequence=line_preprocessing(sequence)
+    sequence=mapper(sequence)
+    sequence=shuffle_and_sort(sequence)
+    sequence=reducer(sequence)
+    create_ouptput_directory(output_directory)
+    save_output(output_directory, sequence)
+    create_marker(output_directory)
 
+
+    from pprint import pprint
+    print()
+    pprint(sequence)
+    print()
 
 if __name__ == "__main__":
     run_job(
-        "input",
-        "output",
+        "files/input",
+        "files/output",
     )
